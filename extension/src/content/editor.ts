@@ -82,11 +82,14 @@ export class InlineEditor {
   private mutationObserver: MutationObserver | null = null;
   private enabled = false;
   private onDirtyChange: ((hasDirty: boolean) => void) | null = null;
+  private selectionToolbar: HTMLElement | null = null;
 
   constructor() {
     // Bind methods
     this.handleInput = this.handleInput.bind(this);
     this.handleKeydown = this.handleKeydown.bind(this);
+    this.handleSelectionChange = this.handleSelectionChange.bind(this);
+    this.handleFormatCommand = this.handleFormatCommand.bind(this);
   }
 
   public setConfig(config: SiteConfig): void {
@@ -102,8 +105,10 @@ export class InlineEditor {
 
     this.enabled = true;
     this.setupEditableElements();
+    this.createSelectionToolbar();
     this.startObserving();
     document.addEventListener('keydown', this.handleKeydown);
+    document.addEventListener('selectionchange', this.handleSelectionChange);
   }
 
   public disable(): void {
@@ -112,7 +117,9 @@ export class InlineEditor {
     this.enabled = false;
     this.stopObserving();
     this.removeAllEditable();
+    this.destroySelectionToolbar();
     document.removeEventListener('keydown', this.handleKeydown);
+    document.removeEventListener('selectionchange', this.handleSelectionChange);
   }
 
   public isEnabled(): boolean {
@@ -192,6 +199,24 @@ export class InlineEditor {
       }
     }
 
+    // Formatting shortcuts (only when in editable area)
+    if ((event.metaKey || event.ctrlKey) && this.isInEditableArea()) {
+      switch (event.key.toLowerCase()) {
+        case 'b':
+          event.preventDefault();
+          this.execFormat('bold');
+          break;
+        case 'i':
+          event.preventDefault();
+          this.execFormat('italic');
+          break;
+        case 'k':
+          event.preventDefault();
+          this.promptAndCreateLink();
+          break;
+      }
+    }
+
     // Escape to cancel editing on focused element
     if (event.key === 'Escape') {
       const active = document.activeElement as HTMLElement;
@@ -200,6 +225,131 @@ export class InlineEditor {
         active.blur();
       }
     }
+  }
+
+  private isInEditableArea(): boolean {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) return false;
+    const anchorNode = selection.anchorNode;
+    if (!anchorNode) return false;
+    const editableParent = (anchorNode.parentElement || anchorNode as Element)?.closest?.('[contenteditable="true"]');
+    return !!editableParent;
+  }
+
+  private createSelectionToolbar(): void {
+    if (this.selectionToolbar) return;
+
+    const toolbar = document.createElement('div');
+    toolbar.className = 'jammin-selection-toolbar';
+    toolbar.innerHTML = `
+      <button data-cmd="bold" title="Bold (Cmd+B)"><strong>B</strong></button>
+      <button data-cmd="italic" title="Italic (Cmd+I)"><em>I</em></button>
+      <button data-cmd="createLink" title="Link (Cmd+K)">Link</button>
+      <span class="jammin-sel-divider"></span>
+      <button data-cmd="formatBlock" data-value="h2" title="Heading 2">H2</button>
+      <button data-cmd="formatBlock" data-value="h3" title="Heading 3">H3</button>
+      <button data-cmd="formatBlock" data-value="p" title="Paragraph">P</button>
+    `;
+
+    // Prevent toolbar clicks from losing selection
+    toolbar.querySelectorAll('button').forEach((btn) => {
+      btn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+      });
+      btn.addEventListener('click', this.handleFormatCommand);
+    });
+
+    document.body.appendChild(toolbar);
+    this.selectionToolbar = toolbar;
+  }
+
+  private destroySelectionToolbar(): void {
+    if (this.selectionToolbar) {
+      this.selectionToolbar.remove();
+      this.selectionToolbar = null;
+    }
+  }
+
+  private handleSelectionChange(): void {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed || selection.toString().trim() === '') {
+      this.hideSelectionToolbar();
+      return;
+    }
+
+    // Check if selection is within editable area
+    const anchorNode = selection.anchorNode;
+    if (!anchorNode) return;
+
+    const editableParent = (anchorNode.parentElement || anchorNode as Element)?.closest?.('[contenteditable="true"]');
+    if (!editableParent) {
+      this.hideSelectionToolbar();
+      return;
+    }
+
+    this.showSelectionToolbar(selection);
+  }
+
+  private showSelectionToolbar(selection: Selection): void {
+    if (!this.selectionToolbar) return;
+
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+
+    this.selectionToolbar.style.display = 'flex';
+    this.selectionToolbar.style.top = (rect.top - 40 + window.scrollY) + 'px';
+    this.selectionToolbar.style.left = (rect.left + rect.width / 2 - this.selectionToolbar.offsetWidth / 2) + 'px';
+  }
+
+  private hideSelectionToolbar(): void {
+    if (this.selectionToolbar) {
+      this.selectionToolbar.style.display = 'none';
+    }
+  }
+
+  private handleFormatCommand(event: Event): void {
+    const btn = event.target as HTMLButtonElement;
+    const cmd = btn.dataset.cmd;
+    const value = btn.dataset.value;
+
+    if (!cmd) return;
+
+    if (cmd === 'createLink') {
+      this.promptAndCreateLink();
+    } else if (cmd === 'formatBlock' && value) {
+      this.execFormat(cmd, '<' + value + '>');
+    } else {
+      this.execFormat(cmd);
+    }
+
+    this.hideSelectionToolbar();
+  }
+
+  private execFormat(command: string, value: string | null = null): void {
+    document.execCommand(command, false, value);
+    this.markAllEditedElementsDirty();
+  }
+
+  private promptAndCreateLink(): void {
+    const url = prompt('Enter URL:');
+    if (url) {
+      document.execCommand('createLink', false, url);
+      this.markAllEditedElementsDirty();
+    }
+    this.hideSelectionToolbar();
+  }
+
+  private markAllEditedElementsDirty(): void {
+    // Check all tracked elements for changes
+    for (const [element, tracked] of this.trackedElements) {
+      const currentContent = element.innerHTML;
+      const isDirty = currentContent !== tracked.originalContent;
+      if (isDirty !== tracked.isDirty) {
+        tracked.isDirty = isDirty;
+        element.classList.toggle('jammin-dirty', isDirty);
+      }
+    }
+    this.notifyDirtyChange();
   }
 
   private startObserving(): void {

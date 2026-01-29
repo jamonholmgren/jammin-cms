@@ -435,5 +435,55 @@ export function getPageStyles(): string {
       outline-color: #f59e0b;
       outline-style: solid;
     }
+
+    /* Selection Toolbar */
+    .jammin-selection-toolbar {
+      position: absolute;
+      display: none;
+      align-items: center;
+      gap: 2px;
+      padding: 4px 6px;
+      background: #1e1e2e;
+      border: 1px solid #3a3a4e;
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      z-index: 2147483646;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    .jammin-selection-toolbar button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 28px;
+      height: 28px;
+      padding: 0 8px;
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      color: #e0e0e0;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background-color 0.15s;
+    }
+
+    .jammin-selection-toolbar button:hover {
+      background: #3a3a4e;
+    }
+
+    .jammin-selection-toolbar button strong {
+      font-weight: 700;
+    }
+
+    .jammin-selection-toolbar button em {
+      font-style: italic;
+    }
+
+    .jammin-selection-toolbar .jammin-sel-divider {
+      width: 1px;
+      height: 20px;
+      background: #3a3a4e;
+      margin: 0 4px;
+    }
   `;
 }

@@ -1,7 +1,8 @@
 {
   "name": "jammin-cms",
-  "version": "1.0.0",
+  "version": "0.1.3",
   "private": true,
+  "type": "module",
   "description": "Chrome extension for inline website editing with Claude Code",
   "scripts": {
     "build": "npm run build:bridge && npm run build:extension",
@@ -10,7 +11,8 @@
     "dev:bridge": "cd bridge && npm run dev",
     "dev:extension": "cd extension && npm run dev",
     "start": "cd bridge && npm run start",
-    "install:all": "cd bridge && npm install && cd ../extension && npm install"
+    "install:all": "cd bridge && npm install && cd ../extension && npm install",
+    "ship": "node scripts/ship.js"
   },
   "keywords": [
     "cms",
