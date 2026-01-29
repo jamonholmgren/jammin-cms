@@ -80,7 +80,7 @@ async function start(port) {
 program
     .name('jammincms')
     .description('Local bridge server for Jammin CMS Chrome extension')
-    .version('0.1.3')
+    .version('0.1.4')
     .option('-p, --port <port>', 'Port to listen on', '9876')
     .action(async (options) => {
     const port = parseInt(options.port, 10);

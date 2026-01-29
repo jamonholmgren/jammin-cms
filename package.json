@@ -1,6 +1,6 @@
 {
   "name": "jammin-cms",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "type": "module",
   "description": "Chrome extension for inline website editing with Claude Code",
