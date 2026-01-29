@@ -214,6 +214,14 @@ export class InlineEditor {
           event.preventDefault();
           this.promptAndCreateLink();
           break;
+        case '7':
+          event.preventDefault();
+          this.execFormat('insertOrderedList');
+          break;
+        case '8':
+          event.preventDefault();
+          this.execFormat('insertUnorderedList');
+          break;
       }
     }
 
@@ -249,6 +257,9 @@ export class InlineEditor {
       <button data-cmd="formatBlock" data-value="h2" title="Heading 2">H2</button>
       <button data-cmd="formatBlock" data-value="h3" title="Heading 3">H3</button>
       <button data-cmd="formatBlock" data-value="p" title="Paragraph">P</button>
+      <span class="jammin-sel-divider"></span>
+      <button data-cmd="insertOrderedList" title="Numbered List (Cmd+7)">1.</button>
+      <button data-cmd="insertUnorderedList" title="Bullet List (Cmd+8)">&bull;</button>
     `;
 
     // Prevent toolbar clicks from losing selection
