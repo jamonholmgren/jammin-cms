@@ -19,28 +19,19 @@ The extension communicates with a local bridge server that spawns Claude Code to
 
 ## Installation
 
-### Bridge Server
-
 ```bash
 npx jammincms
 ```
 
-Or install globally:
+On first run, this extracts the Chrome extension to `./jammin-cms-extension` and starts the bridge server.
 
-```bash
-npm install -g jammincms
-jammincms
-```
+Load the extension in Chrome:
+
+1. Open `chrome://extensions`
+2. Enable "Developer mode" (toggle in top right)
+3. Click "Load unpacked" and select the `jammin-cms-extension` folder
 
 The bridge runs on `ws://localhost:9876` by default. Use `-p` to specify a different port.
-
-### Chrome Extension
-
-Clone this repository and load the extension:
-
-1. Navigate to `chrome://extensions`
-2. Enable "Developer mode"
-3. Click "Load unpacked" and select the `extension/dist` directory
 
 ## Configuration
 

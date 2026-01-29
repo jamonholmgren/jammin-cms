@@ -3,8 +3,52 @@
 import { Command } from 'commander';
 import { startServer } from './server.js';
 import { checkClaudeAvailable } from './claude.js';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { cpSync, existsSync, mkdirSync, rmSync } from 'fs';
 
 const program = new Command();
+
+const EXTENSION_FOLDER = 'jammin-cms-extension';
+
+function getExtensionSource(): string {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+  return join(__dirname, '..', 'extension');
+}
+
+function getExtensionDir(): string {
+  return join(process.cwd(), EXTENSION_FOLDER);
+}
+
+function ensureExtensionInstalled(): { installed: boolean; path: string; fresh: boolean } {
+  const extensionSource = getExtensionSource();
+  const extensionDir = getExtensionDir();
+
+  if (!existsSync(extensionSource)) {
+    return { installed: false, path: extensionDir, fresh: false };
+  }
+
+  const alreadyExists = existsSync(extensionDir);
+
+  if (!alreadyExists) {
+    mkdirSync(extensionDir, { recursive: true });
+    cpSync(extensionSource, extensionDir, { recursive: true });
+  }
+
+  return { installed: true, path: extensionDir, fresh: !alreadyExists };
+}
+
+function printExtensionInstructions(path: string): void {
+  console.log('\n┌─────────────────────────────────────────────────────────┐');
+  console.log('│  Chrome Extension Setup                                 │');
+  console.log('├─────────────────────────────────────────────────────────┤');
+  console.log('│  1. Open chrome://extensions                            │');
+  console.log('│  2. Enable "Developer mode" (top right)                 │');
+  console.log('│  3. Click "Load unpacked" and select:                   │');
+  console.log(`│     ${path}`);
+  console.log('└─────────────────────────────────────────────────────────┘\n');
+}
 
 async function start(port: number): Promise<void> {
   if (isNaN(port) || port < 1 || port > 65535) {
@@ -12,12 +56,19 @@ async function start(port: number): Promise<void> {
     process.exit(1);
   }
 
+  // Ensure extension is available
+  const ext = ensureExtensionInstalled();
+  if (ext.fresh) {
+    console.log('Extension installed to:', ext.path);
+    printExtensionInstructions(ext.path);
+  }
+
   // Check if Claude CLI is available
   const claudeAvailable = await checkClaudeAvailable();
   if (!claudeAvailable) {
     console.warn('Warning: Claude CLI not found in PATH');
     console.warn('Install it with: npm install -g @anthropic-ai/claude-code');
-    console.warn('The server will start but edit jobs will fail.');
+    console.warn('The server will start but edit jobs will fail.\n');
   } else {
     console.log('Claude CLI: available');
   }
@@ -94,6 +145,41 @@ program
       console.log('Bridge server: not running');
       process.exit(1);
     });
+  });
+
+program
+  .command('extension-path')
+  .description('Print the path to the Chrome extension')
+  .action(() => {
+    const ext = ensureExtensionInstalled();
+    if (!ext.installed) {
+      console.error('Extension files not found in package.');
+      process.exit(1);
+    }
+    console.log(ext.path);
+  });
+
+program
+  .command('reinstall-extension')
+  .description('Reinstall the Chrome extension (replaces existing)')
+  .action(() => {
+    const extensionSource = getExtensionSource();
+    const extensionDir = getExtensionDir();
+
+    if (!existsSync(extensionSource)) {
+      console.error('Extension files not found in package.');
+      process.exit(1);
+    }
+
+    if (existsSync(extensionDir)) {
+      rmSync(extensionDir, { recursive: true });
+    }
+
+    mkdirSync(extensionDir, { recursive: true });
+    cpSync(extensionSource, extensionDir, { recursive: true });
+
+    console.log('Extension reinstalled to:', extensionDir);
+    printExtensionInstructions(extensionDir);
   });
 
 program.parse();

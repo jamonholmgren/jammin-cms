@@ -1,6 +1,6 @@
 {
   "name": "jammincms",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Local bridge server for Jammin CMS Chrome extension - connects to Claude Code CLI",
   "type": "module",
   "main": "dist/index.js",
@@ -8,14 +8,16 @@
     "jammincms": "./dist/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "extension"
   ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm run build"
+    "copy-extension": "rm -rf extension && cp -r ../extension/dist extension",
+    "prepublishOnly": "npm run build && npm run copy-extension"
   },
   "keywords": [
     "cms",
