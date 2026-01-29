@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jammin CMS</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      width: 280px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      background: #1e1e2e;
+      color: #e0e0e0;
+    }
+
+    .header {
+      padding: 16px;
+      background: #2a2a3e;
+      border-bottom: 1px solid #3a3a4e;
+    }
+
+    .header h1 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #6b7280;
+    }
+
+    .status-dot.connected {
+      background: #22c55e;
+    }
+
+    .status-dot.disconnected {
+      background: #ef4444;
+    }
+
+    .status-dot.warning {
+      background: #f59e0b;
+    }
+
+    .status-text {
+      font-size: 12px;
+      color: #a0a0a0;
+    }
+
+    .content {
+      padding: 16px;
+    }
+
+    .site-info {
+      background: #2a2a3e;
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .site-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .site-label {
+      font-size: 11px;
+      color: #a0a0a0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .site-status {
+      font-size: 11px;
+      color: #a0a0a0;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: #3a3a4e;
+    }
+
+    .site-status.active {
+      color: #22c55e;
+      background: rgba(34, 197, 94, 0.15);
+    }
+
+    .site-name {
+      font-weight: 500;
+      margin-bottom: 12px;
+    }
+
+    .no-site {
+      text-align: center;
+      padding: 16px;
+      color: #a0a0a0;
+    }
+
+    .no-site p {
+      margin-bottom: 12px;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 10px 16px;
+      background: #6366f1;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      transition: background-color 0.2s;
+    }
+
+    .btn:hover:not(:disabled) {
+      background: #4f46e5;
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn.activated {
+      background: #22c55e;
+    }
+
+    .btn-secondary {
+      background: #3a3a4e;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: #4a4a5e;
+    }
+
+    .footer {
+      padding: 12px 16px;
+      border-top: 1px solid #3a3a4e;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Jammin CMS</h1>
+    <div class="status-row">
+      <span id="status-dot" class="status-dot"></span>
+      <span id="connection-status" class="status-text">Checking...</span>
+    </div>
+  </div>
+
+  <div class="content">
+    <div id="site-info" class="site-info" style="display: none;">
+      <div class="site-header">
+        <div class="site-label">Current Site</div>
+        <span id="site-status" class="site-status">Inactive</span>
+      </div>
+      <div id="site-name" class="site-name"></div>
+      <button id="activate-btn" class="btn">Activate Editing</button>
+    </div>
+
+    <div id="no-site" class="no-site" style="display: none;">
+      <p>This site is not configured for editing.</p>
+      <button id="configure-site" class="btn">Configure Site</button>
+    </div>
+  </div>
+
+  <div class="footer">
+    <button id="open-options" class="btn btn-secondary">Settings</button>
+  </div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Jammin CMS",
+  "description": "Inline website editing with Claude Code",
+  "version": "1.0.0",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": [],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Jammin CMS"
+  },
+  "options_page": "options.html"
+}
