@@ -1,6 +1,6 @@
 {
   "name": "jammincms",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Local bridge server for Jammin CMS Chrome extension - connects to Claude Code CLI",
   "type": "module",
   "main": "dist/index.js",
