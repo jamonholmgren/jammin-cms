@@ -88,6 +88,12 @@ function detectPhase(output: string): 'thinking' | 'editing' | 'complete' {
   return 'thinking';
 }
 
+// Job timeout in milliseconds (5 minutes)
+const JOB_TIMEOUT = 5 * 60 * 1000;
+
+// Inactivity timeout - if no output for this long, warn (30 seconds)
+const INACTIVITY_TIMEOUT = 30 * 1000;
+
 export async function spawnClaudeJob(
   job: Job,
   callbacks: ClaudeCallbacks
@@ -96,6 +102,10 @@ export async function spawnClaudeJob(
   const claudePath = job.claudePath || 'claude';
 
   job.status = 'running';
+
+  console.log(`[Job ${job.id}] Starting Claude...`);
+  console.log(`[Job ${job.id}] Working directory: ${job.projectPath}`);
+  console.log(`[Job ${job.id}] Claude path: ${claudePath}`);
 
   return new Promise((resolve, reject) => {
     // Spawn claude CLI with the prompt via stdin
@@ -116,20 +126,55 @@ export async function spawnClaudeJob(
 
     job.process = proc;
 
+    console.log(`[Job ${job.id}] Claude spawned with PID ${proc.pid}`);
+
     // Send prompt via stdin
     proc.stdin?.write(prompt);
     proc.stdin?.end();
+    console.log(`[Job ${job.id}] Prompt sent to Claude`);
 
     let fullOutput = '';
     let currentPhase: 'thinking' | 'editing' | 'complete' = 'thinking';
+    let lastOutputTime = Date.now();
+    let inactivityWarned = false;
+
+    // Timeout for entire job
+    const jobTimeout = setTimeout(() => {
+      if (job.status === 'running') {
+        console.error(`[Job ${job.id}] Job timed out after ${JOB_TIMEOUT / 1000}s`);
+        callbacks.onProgress('\n\n[TIMEOUT] Job exceeded maximum time limit.\n', 'complete');
+        cancelJob(job);
+      }
+    }, JOB_TIMEOUT);
+
+    // Check for inactivity
+    const inactivityCheck = setInterval(() => {
+      if (job.status !== 'running') {
+        clearInterval(inactivityCheck);
+        return;
+      }
+
+      const elapsed = Date.now() - lastOutputTime;
+      if (elapsed > INACTIVITY_TIMEOUT && !inactivityWarned) {
+        inactivityWarned = true;
+        console.warn(`[Job ${job.id}] No output for ${elapsed / 1000}s - Claude may be stuck`);
+        callbacks.onProgress(`\n[Waiting for Claude... no output for ${Math.round(elapsed / 1000)}s]\n`, currentPhase);
+      }
+    }, 5000);
 
     const handleOutput = (data: Buffer) => {
       const text = data.toString();
       fullOutput += text;
+      lastOutputTime = Date.now();
+      inactivityWarned = false;
+
+      // Log to bridge console
+      process.stdout.write(text);
 
       const newPhase = detectPhase(text);
       if (newPhase !== currentPhase) {
         currentPhase = newPhase;
+        console.log(`[Job ${job.id}] Phase: ${currentPhase}`);
       }
 
       callbacks.onProgress(text, currentPhase);
@@ -139,24 +184,35 @@ export async function spawnClaudeJob(
     proc.stderr?.on('data', handleOutput);
 
     proc.on('error', (err) => {
+      clearTimeout(jobTimeout);
+      clearInterval(inactivityCheck);
+      console.error(`[Job ${job.id}] Error:`, err.message);
       job.status = 'error';
       callbacks.onComplete(false, [], err.message);
       reject(err);
     });
 
     proc.on('close', (code) => {
+      clearTimeout(jobTimeout);
+      clearInterval(inactivityCheck);
+
+      console.log(`[Job ${job.id}] Claude exited with code ${code}`);
+
       const filesChanged = parseFilesChanged(fullOutput);
 
       if (code === 0) {
         job.status = 'complete';
         job.filesChanged = filesChanged;
+        console.log(`[Job ${job.id}] Complete. Files changed:`, filesChanged);
         callbacks.onComplete(true, filesChanged);
         resolve();
       } else if (job.status === 'cancelled') {
+        console.log(`[Job ${job.id}] Cancelled`);
         callbacks.onComplete(false, [], 'Job cancelled');
         resolve();
       } else {
         job.status = 'error';
+        console.error(`[Job ${job.id}] Failed with code ${code}`);
         callbacks.onComplete(false, filesChanged, `Claude exited with code ${code}`);
         resolve();
       }

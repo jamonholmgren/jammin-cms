@@ -33,6 +33,24 @@ Load the extension in Chrome:
 
 The bridge runs on `ws://localhost:9876` by default. Use `-p` to specify a different port.
 
+### Local Development
+
+To run the extension in development mode, clone this repo, run `npm install`, and then run:
+
+```bash
+npm run dev:bridge
+```
+
+This will start the bridge server in development mode.
+
+You can install the extension locally by running:
+
+```bash
+npm run dev:extension
+```
+
+Then load the `extension/dist` folder as an unpacked extension in Chrome (see [Installation](#installation) steps 1–3).
+
 ## Configuration
 
 Click the extension icon and go to Settings to configure:
