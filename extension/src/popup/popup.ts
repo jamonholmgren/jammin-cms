@@ -21,7 +21,7 @@ async function getCurrentTabConfig(): Promise<SiteConfig | null> {
     chrome.runtime.sendMessage(
       {
         action: 'get_site_config',
-        payload: { url: tab.url },
+        payload: { url: tab.url, title: tab.title },
       },
       (response) => {
         resolve(response?.payload || null);

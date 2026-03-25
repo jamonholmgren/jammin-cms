@@ -20,8 +20,12 @@ chrome.runtime.onMessage.addListener(
   ) => {
     const tabId = sender.tab?.id;
 
-    handleMessage(message, tabId).then(sendResponse).catch((err) => {
-      console.error('[Jammin] Error handling message:', err);
+    console.log(`[Jammin] Content → bg: ${message.action} (tab ${tabId ?? '?'})`);
+    handleMessage(message, tabId).then((response) => {
+      console.log(`[Jammin] Bg → content: ${response.action} (tab ${tabId ?? '?'})`);
+      sendResponse(response);
+    }).catch((err) => {
+      console.error('[Jammin] Error handling message:', message.action, err);
       sendResponse({
         action: 'error',
         payload: { message: err instanceof Error ? err.message : 'Unknown error' },
@@ -39,9 +43,9 @@ async function handleMessage(
 ): Promise<BackgroundToContentMessage> {
   switch (message.action) {
     case 'get_site_config': {
-      const { url } = message.payload as { url: string };
+      const { url, title } = message.payload as { url: string; title?: string };
       const sites = await getSiteConfigs();
-      const config = matchSiteConfig(url, sites);
+      const config = matchSiteConfig(url, sites, title);
       return {
         action: 'site_config',
         payload: config || null,
@@ -140,10 +144,13 @@ bridgeConnection.addMessageHandler((message: BridgeToExtensionMessage) => {
   if (!('jobId' in message) || !message.jobId) return;
 
   const jobId = message.jobId;
+  const shortId = jobId.slice(0, 8);
 
   // Find tabs subscribed to this job
+  let foundSubscriber = false;
   for (const [tabId, jobs] of tabJobSubscriptions) {
     if (jobs.has(jobId)) {
+      foundSubscriber = true;
       let action: BackgroundToContentMessage['action'];
       switch (message.type) {
         case 'job_progress':
@@ -166,11 +173,16 @@ bridgeConnection.addMessageHandler((message: BridgeToExtensionMessage) => {
           return;
       }
 
+      console.log(`[Jammin] Forwarding ${message.type} (job ${shortId}) → tab ${tabId}`);
       chrome.tabs.sendMessage(tabId, {
         action,
         payload: message,
       } as BackgroundToContentMessage);
     }
+  }
+
+  if (!foundSubscriber) {
+    console.warn(`[Jammin] No tab subscribed to job ${shortId} for ${message.type}`);
   }
 });
 

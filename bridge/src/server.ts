@@ -79,6 +79,10 @@ async function handleSubmitEdit(
   message: SubmitEditMessage
 ): Promise<void> {
   const { jobId, projectPath, siteUrl, changes, customInstructions, claudePath, skipGitCheck } = message;
+  const shortId = jobId.slice(0, 8);
+
+  console.log(`[Job ${shortId}] submit_edit received — ${changes.length} change(s), path: ${projectPath}, url: ${siteUrl}`);
+  if (skipGitCheck) console.log(`[Job ${shortId}] Skipping git check`);
 
   // Check if job already exists
   if (jobs.has(jobId)) {
@@ -92,8 +96,10 @@ async function handleSubmitEdit(
 
   // Check for uncommitted git changes (unless skipped)
   if (!skipGitCheck) {
+    console.log(`[Job ${shortId}] Checking git status...`);
     const gitStatus = checkGitDirty(projectPath);
     if (gitStatus.isDirty) {
+      console.log(`[Job ${shortId}] Git dirty — ${gitStatus.changedFiles.length} changed files`);
       sendToClient(client, {
         type: 'git_dirty',
         jobId,
@@ -213,6 +219,7 @@ export function startServer(port: number = DEFAULT_PORT): WebSocketServer {
     ws.on('message', async (data) => {
       try {
         const message = JSON.parse(data.toString()) as ExtensionMessage;
+        console.log(`Received: ${message.type}`);
         await handleMessage(ws, message);
       } catch (err) {
         console.error('Error handling message:', err);

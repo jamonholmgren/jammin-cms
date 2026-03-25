@@ -23,6 +23,7 @@ const FORM_DRAFT_KEY = 'jammin_site_form_draft';
 const FORM_FIELDS = [
   'site-name-input',
   'site-pattern',
+  'site-title-pattern',
   'site-path',
   'site-instructions',
   'site-selectors',
@@ -31,6 +32,7 @@ const FORM_FIELDS = [
 interface FormDraft {
   'site-name-input': string;
   'site-pattern': string;
+  'site-title-pattern': string;
   'site-path': string;
   'site-instructions': string;
   'site-selectors': string;
@@ -80,6 +82,7 @@ function saveFormDraft(): void {
   const draft: FormDraft = {
     'site-name-input': (document.getElementById('site-name-input') as HTMLInputElement).value,
     'site-pattern': (document.getElementById('site-pattern') as HTMLInputElement).value,
+    'site-title-pattern': (document.getElementById('site-title-pattern') as HTMLInputElement).value,
     'site-path': (document.getElementById('site-path') as HTMLInputElement).value,
     'site-instructions': (document.getElementById('site-instructions') as HTMLTextAreaElement).value,
     'site-selectors': (document.getElementById('site-selectors') as HTMLTextAreaElement).value,
@@ -107,6 +110,7 @@ function clearFormDraft(): void {
 function restoreFormFromDraft(draft: FormDraft): void {
   (document.getElementById('site-name-input') as HTMLInputElement).value = draft['site-name-input'] || '';
   (document.getElementById('site-pattern') as HTMLInputElement).value = draft['site-pattern'] || '';
+  (document.getElementById('site-title-pattern') as HTMLInputElement).value = draft['site-title-pattern'] || '';
   (document.getElementById('site-path') as HTMLInputElement).value = draft['site-path'] || '';
   (document.getElementById('site-instructions') as HTMLTextAreaElement).value = draft['site-instructions'] || '';
   (document.getElementById('site-selectors') as HTMLTextAreaElement).value = draft['site-selectors'] || DEFAULT_EDITABLE_SELECTORS.join('\n');
@@ -131,7 +135,7 @@ function renderSites(): void {
         <div class="site-header">
           <div class="site-info">
             <div class="site-name">${escapeHtml(site.name)}</div>
-            <div class="site-url">${escapeHtml(site.urlPattern)}</div>
+            <div class="site-url">${escapeHtml(site.urlPattern)}${site.titlePattern ? ` · title: ${escapeHtml(site.titlePattern)}` : ''}</div>
           </div>
           <label class="toggle">
             <input type="checkbox" ${site.enabled ? 'checked' : ''} data-toggle="${site.id}">
@@ -207,6 +211,7 @@ function openEditModal(id: string): void {
   // Fill form
   (document.getElementById('site-name-input') as HTMLInputElement).value = site.name;
   (document.getElementById('site-pattern') as HTMLInputElement).value = site.urlPattern;
+  (document.getElementById('site-title-pattern') as HTMLInputElement).value = site.titlePattern || '';
   (document.getElementById('site-path') as HTMLInputElement).value = site.localPath;
   (document.getElementById('site-instructions') as HTMLTextAreaElement).value =
     site.customInstructions || '';
@@ -232,6 +237,7 @@ function cancelModal(): void {
 function saveSiteFromForm(): void {
   const name = (document.getElementById('site-name-input') as HTMLInputElement).value.trim();
   const urlPattern = (document.getElementById('site-pattern') as HTMLInputElement).value.trim();
+  const titlePattern = (document.getElementById('site-title-pattern') as HTMLInputElement).value.trim();
   const localPath = (document.getElementById('site-path') as HTMLInputElement).value.trim();
   const customInstructions = (
     document.getElementById('site-instructions') as HTMLTextAreaElement
@@ -256,6 +262,7 @@ function saveSiteFromForm(): void {
     if (site) {
       site.name = name;
       site.urlPattern = urlPattern;
+      site.titlePattern = titlePattern || undefined;
       site.localPath = localPath;
       site.customInstructions = customInstructions;
       site.editableSelectors = editableSelectors.length > 0 ? editableSelectors : [...DEFAULT_EDITABLE_SELECTORS];
@@ -266,6 +273,7 @@ function saveSiteFromForm(): void {
       id: crypto.randomUUID(),
       name,
       urlPattern,
+      titlePattern: titlePattern || undefined,
       localPath,
       customInstructions,
       editableSelectors: editableSelectors.length > 0 ? editableSelectors : [...DEFAULT_EDITABLE_SELECTORS],

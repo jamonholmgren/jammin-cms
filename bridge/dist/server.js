@@ -54,6 +54,10 @@ async function handleMessage(client, message) {
 }
 async function handleSubmitEdit(client, message) {
     const { jobId, projectPath, siteUrl, changes, customInstructions, claudePath, skipGitCheck } = message;
+    const shortId = jobId.slice(0, 8);
+    console.log(`[Job ${shortId}] submit_edit received — ${changes.length} change(s), path: ${projectPath}, url: ${siteUrl}`);
+    if (skipGitCheck)
+        console.log(`[Job ${shortId}] Skipping git check`);
     // Check if job already exists
     if (jobs.has(jobId)) {
         sendToClient(client, {
@@ -65,8 +69,10 @@ async function handleSubmitEdit(client, message) {
     }
     // Check for uncommitted git changes (unless skipped)
     if (!skipGitCheck) {
+        console.log(`[Job ${shortId}] Checking git status...`);
         const gitStatus = checkGitDirty(projectPath);
         if (gitStatus.isDirty) {
+            console.log(`[Job ${shortId}] Git dirty — ${gitStatus.changedFiles.length} changed files`);
             sendToClient(client, {
                 type: 'git_dirty',
                 jobId,
@@ -171,6 +177,7 @@ export function startServer(port = DEFAULT_PORT) {
         ws.on('message', async (data) => {
             try {
                 const message = JSON.parse(data.toString());
+                console.log(`Received: ${message.type}`);
                 await handleMessage(ws, message);
             }
             catch (err) {

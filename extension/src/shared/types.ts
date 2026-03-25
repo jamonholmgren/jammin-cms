@@ -3,6 +3,7 @@ export interface SiteConfig {
   id: string;
   name: string;
   urlPattern: string; // Glob pattern, e.g., "https://example.com/*"
+  titlePattern?: string; // Glob pattern matched against page title, e.g., "*Jammin Games*"
   localPath: string; // Local file path, e.g., "~/Code/my-website"
   customInstructions?: string;
   editableSelectors: string[]; // CSS selectors for editable regions

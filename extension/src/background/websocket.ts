@@ -48,9 +48,11 @@ class BridgeConnection {
       this.ws.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data) as BridgeToExtensionMessage;
+          const jobId = 'jobId' in message ? (message as { jobId: string }).jobId : undefined;
+          console.log(`[Jammin] Bridge → ext: ${message.type}${jobId ? ` (job ${jobId.slice(0, 8)})` : ''}`);
           this.handleMessage(message);
         } catch (err) {
-          console.error('[Jammin] Failed to parse message:', err);
+          console.error('[Jammin] Failed to parse bridge message:', err, event.data);
         }
       };
 
@@ -154,10 +156,12 @@ class BridgeConnection {
   }
 
   public send(message: ExtensionToBridgeMessage): void {
+    const jobId = 'jobId' in message ? (message as { jobId: string }).jobId : undefined;
     if (this.ws?.readyState === WebSocket.OPEN) {
+      console.log(`[Jammin] Ext → bridge: ${message.type}${jobId ? ` (job ${jobId.slice(0, 8)})` : ''}`);
       this.ws.send(JSON.stringify(message));
     } else {
-      // Queue message for when connection is established
+      console.warn(`[Jammin] Bridge not connected, queuing: ${message.type} (ws state: ${this.ws?.readyState ?? 'null'})`);
       this.pendingMessages.push(message);
       this.connect();
     }

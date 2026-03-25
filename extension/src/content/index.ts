@@ -48,7 +48,7 @@ class JamminCMS {
   async activate(): Promise<void> {
     if (this.activated) return;
 
-    // Check if this page has a matching config
+    console.log('[Jammin] Activating — checking config for:', window.location.href, '| title:', document.title);
     const config = await this.getConfigForCurrentPage();
     if (!config) {
       console.log('[Jammin] No matching config for this page');
@@ -57,7 +57,7 @@ class JamminCMS {
 
     this.config = config;
     this.activated = true;
-    console.log('[Jammin] Activated for:', config.name);
+    console.log('[Jammin] Activated for:', config.name, '| path:', config.localPath);
 
     // Create components
     this.editor = new InlineEditor();
@@ -88,7 +88,7 @@ class JamminCMS {
       chrome.runtime.sendMessage(
         {
           action: 'get_site_config',
-          payload: { url: window.location.href },
+          payload: { url: window.location.href, title: document.title },
         } as ContentToBackgroundMessage,
         (response: BackgroundToContentMessage) => {
           resolve(response?.payload as SiteConfig | null);
@@ -124,6 +124,7 @@ class JamminCMS {
     const changes = this.editor.getDirtyChanges();
     if (changes.length === 0) return;
 
+    console.log(`[Jammin] Saving ${changes.length} change(s) to ${this.config.localPath}`);
     this.toolbar.setSaving(true);
     this.toolbar.setStatus('Checking project...');
     this.toolbar.resetOutput();
@@ -146,11 +147,15 @@ class JamminCMS {
       (response: BackgroundToContentMessage) => {
         if (response?.action === 'job_accepted') {
           this.currentJobId = (response.payload as { jobId: string }).jobId;
+          console.log(`[Jammin] Job accepted: ${this.currentJobId.slice(0, 8)}`);
           this.toolbar?.setStatus('Claude is working...');
         } else if (response?.action === 'error') {
+          console.error('[Jammin] Submit error:', (response.payload as { message: string }).message);
           this.toolbar?.setSaving(false);
           this.toolbar?.setStatus('Error: ' + (response.payload as { message: string }).message);
           this.pendingChanges = null;
+        } else {
+          console.warn('[Jammin] Unexpected submit response:', response);
         }
       }
     );
@@ -172,7 +177,10 @@ class JamminCMS {
   }
 
   private handleBackgroundMessage(message: BackgroundToContentMessage): void {
-    if (!this.toolbar || !this.editor) return;
+    if (!this.toolbar || !this.editor) {
+      console.warn('[Jammin] Received message but toolbar/editor not ready:', message.action);
+      return;
+    }
 
     switch (message.action) {
       case 'job_progress': {
@@ -182,6 +190,8 @@ class JamminCMS {
           this.toolbar.setStatus(
             progress.phase === 'editing' ? 'Editing files...' : 'Claude is thinking...'
           );
+        } else {
+          console.warn(`[Jammin] Progress for unknown job ${progress.jobId?.slice(0, 8)}, current: ${this.currentJobId?.slice(0, 8)}`);
         }
         break;
       }
@@ -189,6 +199,7 @@ class JamminCMS {
       case 'job_complete': {
         const complete = message.payload as JobCompleteMessage;
         if (complete.jobId === this.currentJobId) {
+          console.log(`[Jammin] Job complete: success=${complete.success}, files=${complete.filesChanged?.length ?? 0}`);
           this.toolbar.setComplete(complete);
           this.toolbar.setSaving(false);
 
@@ -226,10 +237,14 @@ class JamminCMS {
       }
 
       case 'error': {
+        console.error('[Jammin] Error from background:', (message.payload as { message: string }).message);
         this.toolbar.setSaving(false);
         this.toolbar.setStatus('Error: ' + (message.payload as { message: string }).message);
         break;
       }
+
+      default:
+        console.log('[Jammin] Unhandled message:', message.action);
     }
   }
 

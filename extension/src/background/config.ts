@@ -51,19 +51,17 @@ export async function deleteSiteConfig(id: string): Promise<void> {
   await saveSiteConfigs(sites.filter((s) => s.id !== id));
 }
 
-// Find matching site config for a URL
-export function matchSiteConfig(url: string, sites: SiteConfig[]): SiteConfig | undefined {
+// Find matching site config for a URL and/or page title
+export function matchSiteConfig(url: string, sites: SiteConfig[], title?: string): SiteConfig | undefined {
   for (const site of sites) {
     if (!site.enabled) continue;
-    if (matchUrlPattern(url, site.urlPattern)) {
-      return site;
-    }
+    if (matchUrlPattern(url, site.urlPattern)) return site;
+    if (title && site.titlePattern && matchGlobPattern(title, site.titlePattern)) return site;
   }
   return undefined;
 }
 
-// Match URL against a glob-like pattern
-function matchUrlPattern(url: string, pattern: string): boolean {
+function matchGlobPattern(value: string, pattern: string): boolean {
   // Convert glob pattern to regex
   // * matches anything except /
   // ** matches anything including /
@@ -73,7 +71,11 @@ function matchUrlPattern(url: string, pattern: string): boolean {
     .replace(/\*/g, '[^/]*'); // * matches non-slash chars
 
   const regex = new RegExp(`^${regexPattern}$`);
-  return regex.test(url);
+  return regex.test(value);
+}
+
+function matchUrlPattern(url: string, pattern: string): boolean {
+  return matchGlobPattern(url, pattern);
 }
 
 // Get extension settings
